@@ -58,7 +58,7 @@ function proxyWritableMethods(dryrun, stats) {
     };
 }
 
-async function migrate({path: dir, projectId, storageBucket, dryrun, app} = {}) {
+async function migrate({path: dir, projectId, storageBucket, dryrun, targetDocument, app} = {}) {
     const stats = {
         scannedFiles: 0,
         executedFiles: 0,
@@ -69,6 +69,21 @@ async function migrate({path: dir, projectId, storageBucket, dryrun, app} = {}) 
         added: 0
     };
 
+    if (!!targetDocument) {
+      const documentPathParts = targetDocument.split("/");
+      const generateMigrationsPath = parts => path.join(dir, parts.join("/"))
+
+      let migrationsPath = generateMigrationsPath(documentPathParts);
+      while (documentPathParts.length > 0 && !(await exists(migrationsPath))) {
+        documentPathParts.pop();
+        migrationsPath = generateMigrationsPath(documentPathParts);
+      }
+      if (documentPathParts.length === 0)
+        throw new Error(
+          `Could not find migrations for target document ${targetDocument}`
+        );
+      dir = migrationsPath;
+    }
     // Get all the scripts
     if (!path.isAbsolute(dir)) {
         dir = path.join(process.cwd(), dir);
@@ -134,7 +149,8 @@ async function migrate({path: dir, projectId, storageBucket, dryrun, app} = {}) 
     // Use Firestore directly so we can mock for dryruns
     const firestore = new Firestore({projectId});
 
-    const collection = firestore.collection('fireway');
+    const firewayMigrationsList =  !!targetDocument ? `${targetDocument}/fireway` : 'fireway'
+    const collection = firestore.collection(firewayMigrationsList);
 
     // Get the latest migration
     const result = await collection
@@ -177,7 +193,7 @@ async function migrate({path: dir, projectId, storageBucket, dryrun, app} = {}) 
         const start = new Date();
         let success, finish;
         try {
-            await migration.migrate({app, firestore, FieldValue, FieldPath});
+            await migration.migrate({app, firestore, FieldValue, FieldPath, targetDocument});
             success = true;
         } catch(e) {
             console.log(`Error in ${file.filename}`, e);

@@ -10,6 +10,7 @@ prog
     .command('migrate')
     .option('--path', 'Path to migration files', './migrations')
     .option('--projectId', 'Target firebase project')
+    .option('--targetDocument', 'Target the migrations to a specific document. Useful if you need to apply migrations incrementally to different parts of the firestore typical for multi-tenant scenarios')
     .option('--dryrun', 'Simulates changes')
     .describe('Migrates schema to the latest version')
     .example('migrate')

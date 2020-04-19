@@ -169,4 +169,34 @@ test('merge: error iterative', wrapper(async ({t, projectId, firestore, app}) =>
     }
 }));
 
+test('targetDocument: migrating', wrapper(async ({t, projectId, firestore, app}) => {
+    let org1 = firestore.collection('orgs').doc();
+
+    await fireway.migrate({
+        projectId,
+        targetDocument: `orgs/${org1.id}`,
+        path: __dirname + '/targetDocument',
+        app
+    });
+    let snapshot = await firestore.collection(`orgs/${org1.id}/fireway`).get();
+    t.equal(snapshot.size, 1);
+
+    await assertData(t, firestore, `orgs/${org1.id}/fireway/0-0.0.0-first`, {
+        checksum: '7feca1e0669d2bd419082dc2627cd226',
+        description: 'first',
+        execution_time: 251,
+        installed_by: 'len',
+        installed_on: {
+            seconds: 1564681117,
+            nanoseconds: 401000000
+        },
+        installed_rank: 0,
+        script: 'v0__first.js',
+        success: true,
+        type: 'js',
+        version: '0.0.0'
+    });
+
+}));
+
 // TODO: write test for delete()
